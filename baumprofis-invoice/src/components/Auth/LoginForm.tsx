@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 
+import {
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Box,
+  CircularProgress,
+  Link
+} from '@mui/material'
+
 export const LoginForm = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,66 +34,79 @@ export const LoginForm = () => {
         await register(email, password)
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred')
+      setError(err.message || 'Ein Fehler ist aufgetreten')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-md mx-auto mt-8">
-      <div className="card">
-        <h2 className="text-2xl font-bold text-center mb-6">
-          {isLogin ? 'Login' : 'Register'}
-        </h2>
+    <Card sx={{ maxWidth: 400, mx: 'auto' }}>
+      <CardContent sx={{ p: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom align="center">
+          {isLogin ? 'Login' : 'Registrieren'}
+        </Typography>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-          <div>
-            <label className="block text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <TextField
+            fullWidth
+            label="E-Mail"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            sx={{ mb: 2 }}
+          />
 
-          {error && (
-            <div className="text-red-600 text-sm">
-              {error}
-            </div>
-          )}
+          <TextField
+            fullWidth
+            label="Passwort"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            sx={{ mb: 3 }}
+          />
 
-          <button
+          <Button
             type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+            sx={{ mb: 2, py: 1.5 }}
           >
-            {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
-          </button>
-        </form>
+            {loading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Lädt...
+              </Box>
+            ) : (
+              isLogin ? 'Anmelden' : 'Registrieren'
+            )}
+          </Button>
+        </Box>
 
-        <div className="mt-6 text-center">
-          <button
+        <Box sx={{ textAlign: 'center', mt: 2 }}>
+          <Link
+            component="button"
+            variant="body2"
             onClick={() => setIsLogin(!isLogin)}
-            className="text-blue-600 hover:underline"
+            sx={{ cursor: 'pointer' }}
           >
-            {isLogin ? 'Need an account? Register' : 'Already have an account? Login'}
-          </button>
-        </div>
-      </div>
-    </div>
+            {isLogin
+              ? 'Benötigen Sie ein Konto? Registrieren'
+              : 'Haben Sie bereits ein Konto? Anmelden'
+            }
+          </Link>
+        </Box>
+      </CardContent>
+    </Card>
   )
 }

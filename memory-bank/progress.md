@@ -24,16 +24,22 @@
 ## Evolution of Project Decisions
 
 ### Technical Stack Evolution
-1. **Initial Consideration**: Server-side API (Node.js + PostgreSQL) for full control
-2. **Decision Shift**: Firebase BaaS selected for speed, cost, and managed complexity
-3. **Optimization Focus**: Free tier compliance through query efficiency and caching
-4. **Architecture Pattern**: PWA + Firestore optimized for offline-first experience
+1. **Initial Stack**: React + custom CSS + Firebase
+2. **Material UI Adoption**: Complete rewrite using only official MUI components
+3. **Performance**: Bundle size ~108KB (acceptable for business app)
+4. **Architecture Pattern**: PWA + Firestore optimized for fast invoice creation
 
-### Feature Prioritization Evolution
-1. **Original Aspirations**: Service templates, advanced reporting, multi-user dashboards
-2. **User Feedback Reality**: Eliminated templates due to complexity concerns
-3. **Core Focus**: Speed, simplicity, and template accuracy above all else
-4. **Accepted Scope**: Invoice creation, customer management, search - as requested
+### Design Philosophy Evolution
+1. **Initial Design**: Complex dashboard with multiple navigation layers
+2. **User Redesign**: Completely simplified to single invoice flow (login → create)
+3. **Material UI Transformation**: Only official MUI components, no custom CSS
+4. **Usability First**: German business standards with structured input fields
+
+### Customer Management Evolution
+1. **Phase 1**: Basic customer storage and linking
+2. **Phase 2**: Fast search with autocomplete selection
+3. **Phase 3**: Structured address fields (Street, ZIP, City) for German standards
+4. **Current**: Auto-create customers, instant populate, reusable across invoices
 
 ### User Experience Evolution
 1. **Initial Vision**: Feature-rich admin dashboard with analytics
