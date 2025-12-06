@@ -2,10 +2,14 @@ import { useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { LoginForm } from './components/Auth/LoginForm'
 import { InvoiceForm } from './components/Invoice/InvoiceForm'
+import { InvoiceWizard } from './components/Wizard/InvoiceWizard'
+import { CustomerManager } from './components/Customers/CustomerManager'
+import { InvoiceHistory } from './components/Invoices/InvoiceHistory'
+import { FirebaseRulesHelper } from './components/FirebaseSetup/FirebaseRulesHelper'
 
 function App() {
   const { user, loading, logout } = useAuth()
-  const [currentView, setCurrentView] = useState<'dashboard' | 'invoice'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'invoice' | 'invoice-wizard' | 'customers' | 'invoice-history' | 'firebase-setup'>('dashboard')
   const [devMode, setDevMode] = useState(false)
 
   // Create mock user for development mode
@@ -67,7 +71,7 @@ function App() {
             Baumprofis Invoice Platform
           </h1>
           <div className="flex items-center gap-4">
-            {currentView === 'invoice' && (
+            {(currentView === 'invoice' || currentView === 'invoice-wizard' || currentView === 'customers' || currentView === 'invoice-history' || currentView === 'firebase-setup') && (
               <button
                 onClick={() => setCurrentView('dashboard')}
                 className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700"
@@ -86,48 +90,196 @@ function App() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="content-area py-8">
         {currentView === 'dashboard' ? (
-          <div className="card max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
-            <p className="text-gray-600 mb-4">
-              Welcome to your invoice management system. Ready to create professional invoices!
-            </p>
+          <div className="animate-fade-in">
+            {/* Hero Section */}
+            <div className="hero-section mb-12">
+              <div className="text-center">
+                <h1 className="h1 mb-4">
+                  Baumprofis Invoice Platform
+                </h1>
+                <p className="body-large opacity-95">
+                  Professionelle Rechnungserstellung für Baumpflege & Gartenarbeiten
+                </p>
+                <p className="caption mt-3 opacity-80">
+                  Schnell • Zuverlässig • Professionell
+                </p>
+              </div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-bold text-blue-800 mb-4">Quick Actions</h3>
-                <button
-                  onClick={() => setCurrentView('invoice')}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 mb-2"
-                >
-                  + Create New Invoice
-                </button>
-                <div className="mt-4 text-blue-700">
-                  <div>• Search Customers</div>
-                  <div>• View Recent Invoices</div>
-                  <div>• Export Data</div>
+            {/* Stats Grid */}
+            <div className="stats-grid mb-12">
+              <div className="stat-card">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">💰</span>
+                  </div>
+                  <div>
+                    <div className="stat-number text-green-600">2.547,80 €</div>
+                    <div className="stat-label">Gesamtumsatz</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-bold text-green-800 mb-4">System Status</h3>
-                <div className="text-green-700">
-                  <div>✅ Firebase Authentication</div>
-                  <div>✅ Invoice Form Template</div>
-                  <div>✅ Auto-calculations</div>
-                  <div>⚠️ Firebase project setup needed</div>
+              <div className="stat-card">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">📄</span>
+                  </div>
+                  <div>
+                    <div className="stat-number text-blue-600">12</div>
+                    <div className="stat-label">Rechnungen</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">👥</span>
+                  </div>
+                  <div>
+                    <div className="stat-number text-purple-600">8</div>
+                    <div className="stat-label">Kunden</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">⚡</span>
+                  </div>
+                  <div>
+                    <div className="stat-number text-amber-600">‹ 3min</div>
+                    <div className="stat-label">Durchschnitt</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
-              <p className="text-yellow-800">
-                <strong>Note:</strong> This is a development environment.
-                Complete Firebase console setup for production use with data persistence.
-              </p>
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              <div className="card-modern">
+                <div
+                  className="card-modern-action cursor-pointer"
+                  onClick={() => setCurrentView('invoice')}
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl">⚡</span>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Schnell erstellen</h3>
+                    <p className="text-sm opacity-90">Direkte Rechnungserstellung für erfahrene Nutzer</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-modern">
+                <div
+                  className="card-modern-action cursor-pointer"
+                  onClick={() => setCurrentView('invoice-wizard')}
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl">🧙‍♂️</span>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Assistent</h3>
+                    <p className="text-sm opacity-90">Schritt-für-Schritt-Anleitung für Neulinge</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-modern">
+                <div
+                  className="card-modern-action cursor-pointer"
+                  onClick={() => setCurrentView('invoice-history')}
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl">📋</span>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Rechnungsübersicht</h3>
+                    <p className="text-sm opacity-90">Verwalten und suchen Sie Ihre erstellten Rechnungen</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-modern">
+                <div
+                  className="card-modern-action cursor-pointer"
+                  onClick={() => setCurrentView('customers')}
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl">👥</span>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Kunden verwalten</h3>
+                    <p className="text-sm opacity-90">Pflegen Sie Ihre Kundendatenbank für schnellen Zugriff</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* System Status */}
+            <div className="card-modern p-8 bg-gray-50 border-gray-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="h4 mb-4 text-gray-900">System Status</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>Firebase Authentication</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>Firestore Data Persistence</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>Professional PDF Generation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>Invoice History & Search</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>Customer Management</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>Auto-calculations & VAT</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="h4 mb-4 text-gray-900">Schnellstart-Tipps</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="bg-white p-3 rounded-lg border">
+                      <strong>Neue Rechnung:</strong> Kunden auswählen oder hinzufügen, Service-Leistungen eingeben
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border">
+                      <strong>PDF generieren:</strong> Rechnung finalisieren, dann "PDF herunterladen" verwenden
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border">
+                      <strong>Kunden suchen:</strong> Überall schnelle Kundenauswahl verfügbar
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        ) : currentView === 'invoice-history' ? (
+          <InvoiceHistory />
+        ) : currentView === 'customers' ? (
+          <CustomerManager />
+        ) : currentView === 'firebase-setup' ? (
+          <FirebaseRulesHelper />
+        ) : currentView === 'invoice-wizard' ? (
+          <InvoiceWizard />
         ) : (
           <InvoiceForm />
         )}

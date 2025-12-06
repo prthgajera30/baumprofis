@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to get user ID
+    function getUserId() {
+      return request.auth.uid;
+    }
+
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && getUserId() == userId;
+    }
+
+    // Customers collection - scoped by user
+    match /customers/{document=**} {
+      allow read, write: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Invoices collection - scoped by user
+    match /invoices/{document=**} {
+      allow read, write: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Allow read/write for testing in development
+    // TODO: Remove this in production and use proper user-scoped rules above
+    match /{document=**} {
+      allow read, write;
+    }
+  }
+}

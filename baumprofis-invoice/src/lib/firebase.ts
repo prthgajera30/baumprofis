@@ -46,17 +46,19 @@ const firebaseConfig = {
   measurementId: "G-3GRMNFXLBZ"
 };
 
-console.warn(`
-🚨 FIREBASE NOT CONFIGURED 🚨
+// Firebase is configured for development with database access enabled
+console.info(`
+✅ FIREBASE CONFIGURED FOR DEVELOPMENT ✅
 
-This app is running in development mode with dummy Firebase keys.
-To enable authentication and data persistence:
+Database access is enabled. You can:
+- Add and manage customers
+- Create and save invoices
+- All data persists in Firestore
 
-1. Follow the instructions above to create a Firebase project
-2. Replace the firebaseConfig values in src/lib/firebase.ts
-3. Restart the development server
-
-Until then, you can still explore the UI but login/authentication won't work.
+For production deployment:
+1. Remove the global read/write rule from firestore.rules
+2. Configure proper authentication in Firebase Console
+3. Deploy updated security rules: firebase deploy --only firestore:rules
 `)
 
 // Initialize Firebase
