@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomers } from '../../hooks/useCustomers'
+import { usePDFGenerator } from '../../hooks/usePDFGenerator'
 import { db } from '../../lib/firebase'
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore'
 import { format } from 'date-fns'
@@ -22,17 +23,14 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
-  Grid,
   IconButton,
   Divider,
   Chip,
-  Autocomplete,
-  ListItem,
-  ListItemText,
-  ListItemButton
+  Autocomplete
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import InvoicePDFTemplate from './InvoicePDFTemplate'
+
 
 interface InvoiceLine {
   id: string
@@ -65,6 +63,7 @@ interface InvoiceData {
 export const InvoiceForm = () => {
   const { user } = useAuth()
   const { customers, createCustomer } = useCustomers()
+  const { generatePDF, loading: pdfLoading, error: pdfError } = usePDFGenerator()
   const [saving, setSaving] = useState(false)
 
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
@@ -186,9 +185,22 @@ export const InvoiceForm = () => {
     }
   }
 
+  const handleDownloadPDF = async () => {
+    const success = await generatePDF(invoiceData)
+    if (!success && pdfError) {
+      alert(`PDF-Generierungsfehler: ${pdfError}`)
+    }
+  }
+
   return (
-    <Card sx={{ maxWidth: 'lg', mx: 'auto' }}>
-      <CardContent sx={{ p: 4 }}>
+    <>
+      {/* Hidden PDF Template for Generation */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }}>
+        <InvoicePDFTemplate invoice={invoiceData} />
+      </div>
+
+      <Card sx={{ maxWidth: 'lg', mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom align="center">
           Neue Rechnung erstellen
         </Typography>
@@ -258,7 +270,7 @@ export const InvoiceForm = () => {
           <Autocomplete
             options={customers}
             getOptionLabel={(customer) => `${customer.name} - ${customer.address}`}
-            onChange={(event, customer) => {
+            onChange={(_, customer) => {
               if (customer) {
                 // Parse address into components
                 const addressParts = customer.address.split(', ');
@@ -286,7 +298,7 @@ export const InvoiceForm = () => {
               />
             )}
             renderOption={(props, customer) => (
-              <Box component="li" {...props}>
+              <Box component="li" {...props} key={customer.id}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                   <Typography variant="body1" fontWeight="medium">
                     {customer.name}
@@ -542,17 +554,16 @@ export const InvoiceForm = () => {
             <Button
               variant="contained"
               color="success"
-              onClick={() => {
-                // TODO: PDF generation
-                alert('PDF generation will be implemented next')
-              }}
+              onClick={handleDownloadPDF}
+              disabled={pdfLoading}
               size="large"
             >
-              PDF herunterladen
+              {pdfLoading ? 'PDF wird erstellt...' : 'PDF herunterladen'}
             </Button>
           )}
         </Box>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   )
 }
