@@ -193,13 +193,7 @@ export const InvoiceForm = () => {
   }
 
   return (
-    <>
-      {/* Hidden PDF Template for Generation */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }}>
-        <InvoicePDFTemplate invoice={invoiceData} />
-      </div>
-
-      <Card sx={{ maxWidth: 'lg', mx: 'auto' }}>
+    <Card sx={{ maxWidth: 'lg', mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom align="center">
           Neue Rechnung erstellen
@@ -564,6 +558,5 @@ export const InvoiceForm = () => {
         </Box>
         </CardContent>
       </Card>
-    </>
   )
 }
