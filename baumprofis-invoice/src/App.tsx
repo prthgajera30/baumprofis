@@ -1,6 +1,7 @@
 import { useAuth } from './hooks/useAuth'
 import { LoginForm } from './components/Auth/LoginForm'
 import { InvoiceForm } from './components/Invoice/InvoiceForm'
+import DevTools from './components/Dev/DevTools'
 
 import {
   AppBar,
@@ -118,6 +119,9 @@ function App() {
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <InvoiceForm />
       </Container>
+      
+      {/* Development Tools - only visible in development mode */}
+      <DevTools />
     </Box>
   )
 }
