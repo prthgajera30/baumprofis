@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../hooks/useAuth'
 import { useCustomers } from '../../hooks/useCustomers'
 import type { Customer } from '../../hooks/useCustomers'
-import { db } from '../../lib/firebase'
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore'
 import { format } from 'date-fns'
-import { ArrowLeft, ArrowRight, Check, User, FileText, Calculator, Download } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, User, FileText, Calculator } from 'lucide-react'
 
 interface InvoiceLine {
   id: string
@@ -38,10 +35,9 @@ const STEPS = [
 ]
 
 export const InvoiceWizard = () => {
-  const { user } = useAuth()
-  const { customers, customerSearchTerm, searchCustomers, createCustomer } = useCustomers()
+  const { customers, searchCustomers, createCustomer } = useCustomers()
   const [currentStep, setCurrentStep] = useState(0)
-  const [saving, setSaving] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     invoiceNumber: `R${format(new Date(), 'yy')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
@@ -78,8 +74,11 @@ export const InvoiceWizard = () => {
           <div className="space-y-4">
             <input
               type="text"
-              value={customerSearchTerm}
-              onChange={(e) => searchCustomers(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                searchCustomers(e.target.value)
+              }}
               placeholder="Suchen nach Namen, E-Mail oder Adresse..."
               className="form-input"
             />
@@ -87,9 +86,9 @@ export const InvoiceWizard = () => {
             <div className="max-h-60 overflow-y-auto">
               {customers
                 .filter(customer =>
-                  customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-                  customer.email?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-                  customer.address.toLowerCase().includes(customerSearchTerm.toLowerCase())
+                  customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  customer.address.toLowerCase().includes(searchTerm.toLowerCase())
                 )
                 .map(customer => (
                   <div
@@ -321,7 +320,7 @@ export const InvoiceWizard = () => {
                 </tr>
               </thead>
               <tbody>
-                {invoiceData.lines.map((line, index) => (
+                {invoiceData.lines.map((line) => (
                   <tr key={line.id} className="border-t border-gray-200">
                     <td className="px-4 py-3">
                       <input
@@ -459,7 +458,7 @@ export const InvoiceWizard = () => {
               <tbody>
                 {invoiceData.lines.map((line, index) => (
                   <tr key={line.id} className="border-b">
-                    <td className="px-4 py-2 text-sm">{index + 1}</td>
+                    <td className="px-4 py-2 text-sm">{index}</td>
                     <td className="px-4 py-2 text-sm">{line.description}</td>
                     <td className="px-4 py-2 text-sm text-right">{line.quantity}</td>
                     <td className="px-4 py-2 text-sm text-center">{line.unit}</td>
@@ -488,13 +487,11 @@ export const InvoiceWizard = () => {
           <div className="flex justify-center gap-4">
             <button
               className="btn btn-primary"
-              disabled={saving}
             >
-              {saving ? 'Speichere...' : 'Rechnung erstellen & PDF herunterladen'}
+              Rechnung erstellen & PDF herunterladen
             </button>
             <button
               className="btn btn-secondary"
-              disabled={saving}
             >
               Nur speichern (Entwurf)
             </button>
@@ -525,7 +522,6 @@ export const InvoiceWizard = () => {
             const Icon = step.icon
             const isActive = index === currentStep
             const isCompleted = index < currentStep
-            const isPending = index > currentStep
 
             return (
               <div key={step.id} className="flex items-center flex-1">

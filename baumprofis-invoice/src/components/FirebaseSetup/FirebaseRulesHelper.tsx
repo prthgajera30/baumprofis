@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export const FirebaseRulesHelper = () => {
   const [showRules, setShowRules] = useState(false);

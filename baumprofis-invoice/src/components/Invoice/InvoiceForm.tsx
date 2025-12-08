@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomers } from '../../hooks/useCustomers'
-import { usePDFGenerator } from '../../hooks/usePDFGenerator'
+import { downloadInvoicePdf } from '../../pdf/downloadInvoicePdf'
 import { db } from '../../lib/firebase'
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore'
 import { format } from 'date-fns'
@@ -29,7 +29,6 @@ import {
   Autocomplete
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
-import InvoicePDFTemplate from './InvoicePDFTemplate'
 
 
 interface InvoiceLine {
@@ -63,8 +62,8 @@ interface InvoiceData {
 export const InvoiceForm = () => {
   const { user } = useAuth()
   const { customers, createCustomer } = useCustomers()
-  const { generatePDF, loading: pdfLoading, error: pdfError } = usePDFGenerator()
   const [saving, setSaving] = useState(false)
+  const [pdfDownloading, setPdfDownloading] = useState(false)
 
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     invoiceNumber: '04138/25',
@@ -110,7 +109,7 @@ export const InvoiceForm = () => {
     }))
   }
 
-  const updateLine = (id: string, field: keyof InvoiceLine, value: any) => {
+  const updateLine = (id: string, field: keyof InvoiceLine, value: string | number) => {
     setInvoiceData(prev => {
       const updatedLines = prev.lines.map(line => {
         if (line.id === id) {
@@ -186,9 +185,73 @@ export const InvoiceForm = () => {
   }
 
   const handleDownloadPDF = async () => {
-    const success = await generatePDF(invoiceData)
-    if (!success && pdfError) {
-      alert(`PDF-Generierungsfehler: ${pdfError}`)
+    try {
+      setPdfDownloading(true)
+
+      // Map InvoiceData to BaumprofisInvoicePdfProps
+      const pdfProps = {
+        // Header / sender (static values from the original template)
+        companyName: "Baumprofis",
+        companyTaglineLines: [
+          "Baumpflege . Baumsanierung . Baumsicherung",
+          "Baumkontrolle . Gartenpflege . Baumfällarbeiten",
+          "(auch Problem- und Risikofällung)"
+        ],
+        senderName: "Phidelia Ogbeide",
+        senderStreet: "Mühlstraße 22",
+        senderZipCity: "65388 Schlangenbad",
+        senderMobile: "+49 175 6048985",
+
+        // Recipient
+        recipientName: invoiceData.customerName || 'Kundenname',
+        recipientLine2: undefined, // Could add if needed
+        recipientStreet: invoiceData.customerStreet || 'Straße',
+        recipientZipCity: `${invoiceData.customerZipCode || 'PLZ'} ${invoiceData.customerCity || 'Ort'}`,
+
+        // Invoice meta
+        invoiceNumber: invoiceData.invoiceNumber,
+        objectDescription: invoiceData.object || 'Baumarbeiten',
+        place: 'Schlangenbad', // Static from template
+        invoiceDate: invoiceData.date,
+
+        salutation: "Sehr geehrte Damen und Herren,",
+        introText: "nach Abschluss der gewünschten Arbeiten stelle ich Ihnen diese in Rechnung.",
+
+        // Invoice items - map the lines
+        items: invoiceData.lines.map((line, index) => ({
+          position: index + 1,
+          description: line.description || `Position ${index + 1}`,
+          unitPrice: Number(line.unitPrice),
+          quantity: Number(line.quantity),
+          unitLabel: line.unit === 'Stunden' ? 'Stunden' : (line.unit === 'Stück' ? 'Stück' : 'pauschal'),
+          total: Number(line.total)
+        })),
+
+        // Totals
+        netTotal: Number(invoiceData.subtotal),
+        vatRate: 0.19, // 19%
+        vatAmount: Number(invoiceData.vatAmount),
+        grossTotal: Number(invoiceData.totalAmount),
+
+        paymentText: undefined, // Use default
+
+        // Bank data (static values from template)
+        bankName: "Rheingauer Volksbank eG.",
+        iban: "DE31 5109 1500 0000 1543 93",
+        bic: "GENODE51RGG",
+        accountHolder: "Phidelia Ogbeide",
+
+        // Footer tax info (static values)
+        taxId: "75961284403",
+        taxNumber: "004/853/60532"
+      }
+
+      await downloadInvoicePdf(pdfProps)
+    } catch (error) {
+      console.error('PDF download error:', error)
+      alert('Fehler beim Herunterladen der PDF.')
+    } finally {
+      setPdfDownloading(false)
     }
   }
 
@@ -549,10 +612,10 @@ export const InvoiceForm = () => {
               variant="contained"
               color="success"
               onClick={handleDownloadPDF}
-              disabled={pdfLoading}
+              disabled={pdfDownloading}
               size="large"
             >
-              {pdfLoading ? 'PDF wird erstellt...' : 'PDF herunterladen'}
+              {pdfDownloading ? 'PDF wird erstellt...' : 'PDF herunterladen'}
             </Button>
           )}
         </Box>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useInvoices } from '../../hooks/useInvoices'
 import { format } from 'date-fns'
-import { Search, Filter, FileText, MoreVertical, Eye, Download, Edit } from 'lucide-react'
+import { Search, Filter, FileText, Eye, Download, Edit } from 'lucide-react'
 
 export const InvoiceHistory = () => {
   const { user } = useAuth()
@@ -15,8 +15,7 @@ export const InvoiceHistory = () => {
     loadInvoices,
     loadMoreInvoices,
     updateFilters,
-    resetFilters,
-    setSelectedInvoice
+    resetFilters
   } = useInvoices()
 
   console.log('Current user in InvoiceHistory:', user)

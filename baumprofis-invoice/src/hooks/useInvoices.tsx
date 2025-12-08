@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from './useAuth'
 import { db } from '../lib/firebase'
-import { collection, getDocs, query, where, orderBy, limit, startAfter, Timestamp } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 
 export interface InvoiceData {
   id?: string
@@ -38,7 +38,6 @@ export const useInvoices = () => {
   const [invoices, setInvoices] = useState<InvoiceData[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null)
-  const [lastDoc, setLastDoc] = useState<any>(null)
   const [hasMore, setHasMore] = useState(true)
 
   // Search filters
@@ -56,19 +55,10 @@ export const useInvoices = () => {
 
     setLoading(true)
     try {
-      // Start with basic query - we'll filter client-side for now to avoid index issues
-      let baseQuery = query(
-        collection(db, 'invoices'),
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
-        limit(25)
-      );
-
       // For now, load ALL invoices for this user and filter client-side
       // This avoids the composite index requirement
       // TODO: Optimize with proper indexes in production
       if (!loadMore) {
-        setLastDoc(null)
         setInvoices([])
       }
 
@@ -86,12 +76,7 @@ export const useInvoices = () => {
         setInvoices(invoiceData)
       }
 
-      if (snapshot.docs.length < 25) {
-        setHasMore(false)
-      } else {
-        setLastDoc(snapshot.docs[snapshot.docs.length - 1])
-        setHasMore(true)
-      }
+      setHasMore(snapshot.docs.length >= 25)
     } catch (error) {
       console.error('Error loading invoices:', error)
     } finally {
