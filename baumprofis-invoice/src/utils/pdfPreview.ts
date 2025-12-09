@@ -3,8 +3,8 @@ import html2canvas from "html2canvas";
 
 // Sample invoice data for development preview
 export const SAMPLE_INVOICE_DATA = {
-  companyName: "Baumprofis GmbH",
-  companyTaglineLines: ["Ihr Partner für professionelle Baumpflege", "Zertifiziert und versichert"],
+  companyName: "Baumprofis",
+  companyTaglineLines: ["Baumpflege . Baumsanierung . Baumsicherung", "Baumkontrolle . Gartenpflege", "Baumfällarbeiten (auch Problem- und Risikofällung)"],
   senderName: "Max Mustermann",
   senderStreet: "Baumstraße 123",
   senderZipCity: "12345 Musterstadt",
@@ -38,6 +38,30 @@ export const SAMPLE_INVOICE_DATA = {
     },
     {
       position: 3,
+      description: "Entfernung des Schnittguts",
+      unitPrice: 50.00,
+      quantity: 2,
+      unitLabel: "Stunden",
+      total: 100.00
+    },
+    {
+      position: 4,
+      description: "Entfernung des Schnittguts",
+      unitPrice: 50.00,
+      quantity: 2,
+      unitLabel: "Stunden",
+      total: 100.00
+    },
+    {
+      position: 5,
+      description: "Entfernung des Schnittguts",
+      unitPrice: 50.00,
+      quantity: 2,
+      unitLabel: "Stunden",
+      total: 100.00
+    },
+    {
+      position: 6,
       description: "Entfernung des Schnittguts",
       unitPrice: 50.00,
       quantity: 2,
@@ -116,7 +140,7 @@ export async function previewInvoicePdf() {
                 font-family: Arial, sans-serif;
               }
               .preview-container {
-                max-width: 800px;
+                max-width: 90%;
                 margin: 0 auto;
                 background: white;
                 box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -235,6 +259,19 @@ function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
           </td>
           <td style="width: 45%; text-align: right; vertical-align: top;">
             <img src="/logos/baumprofis logo.png" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 10px;" alt="Company Logo">
+          </td>
+        </tr>
+        <tr>
+          <td style="margin-bottom: 20px;">
+            <div style="font-size:9px">${senderName} ${senderStreet}</div>
+            <div style="font-size:9px">${senderZipCity}</div>
+
+            <div style="margin-top: 20px;">${recipientName}</div>
+            ${recipientLine2 ? `<div>${recipientLine2}</div>` : ''}
+            <div>${recipientStreet}</div>
+            <div>${recipientZipCity}</div>
+          </td>
+          <td style="width: 45%; text-align: right; vertical-align: top;">
             <div>${companyName}</div>
             <div>${senderName}</div>
             <div>${senderStreet}</div>
@@ -243,14 +280,6 @@ function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
           </td>
         </tr>
       </table>
-
-      <!-- Recipient -->
-      <div style="margin-bottom: 20px; margin-top: 40px;">
-        <div>${recipientName}</div>
-        ${recipientLine2 ? `<div>${recipientLine2}</div>` : ''}
-        <div>${recipientStreet}</div>
-        <div>${recipientZipCity}</div>
-      </div>
 
       <!-- Place and Date -->
       <div style="text-align: right; font-size: 12px; margin-bottom: 12px;">
@@ -270,24 +299,26 @@ function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
       </div>
 
       <!-- Items Table -->
-      <table style="width: 100%; border-top: 1px solid #666; border-bottom: 1px solid #666; margin-top: 20px; margin-bottom: 10px;">
+      <table style="width: 100%; border-collapse: collapse; border: 1px solid #333; margin-top: 20px; margin-bottom: 15px;">
         <thead>
-          <tr>
-            <th style="padding: 8px; text-align: left; border-bottom: 1px solid #666; font-weight: bold;">Beschreibung</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 1px solid #666; font-weight: bold;">Einzelpreis</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 1px solid #666; font-weight: bold;">Anzahl</th>
-            <th style="padding: 8px; text-align: center; border-bottom: 1px solid #666; font-weight: bold;">Einheit</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 1px solid #666; font-weight: bold;">Gesamtpreis</th>
+          <tr style="background-color: #f8f9fa;">
+            <th style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #333; border-right: 1px solid #ddd; font-weight: bold; font-size: 11px; width: 8%;">Pos</th>
+            <th style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #333; border-right: 1px solid #ddd; font-weight: bold; font-size: 11px;">Beschreibung</th>
+            <th style="padding: 8px 12px; text-align: right; border-bottom: 1px solid #333; border-right: 1px solid #ddd; font-weight: bold; font-size: 11px;">Einzelpreis</th>
+            <th style="padding: 8px 12px; text-align: right; border-bottom: 1px solid #333; border-right: 1px solid #ddd; font-weight: bold; font-size: 11px;">Anzahl</th>
+            <th style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #333; border-right: 1px solid #ddd; font-weight: bold; font-size: 11px;">Einheit</th>
+            <th style="padding: 8px 12px; text-align: right; border-bottom: 1px solid #333; font-weight: bold; font-size: 11px;">Gesamtpreis</th>
           </tr>
         </thead>
         <tbody>
           ${items.map(item => `
             <tr>
-              <td style="padding: 6px;">${item.description}</td>
-              <td style="padding: 6px; text-align: right;">${formatEuro(item.unitPrice)}</td>
-              <td style="padding: 6px; text-align: right;">${item.quantity}</td>
-              <td style="padding: 6px; text-align: center;">${item.unitLabel}</td>
-              <td style="padding: 6px; text-align: right;">${formatEuro(item.total)}</td>
+              <td style="padding: 6px 12px; text-align: center; border-bottom: 1px solid #eee; border-right: 1px solid #ddd; font-size: 11px; font-weight: bold;">${item.position}</td>
+              <td style="padding: 6px 12px; border-bottom: 1px solid #eee; border-right: 1px solid #ddd; font-size: 11px;">${item.description}</td>
+              <td style="padding: 6px 12px; text-align: right; border-bottom: 1px solid #eee; border-right: 1px solid #ddd; font-size: 11px;">${formatEuro(item.unitPrice)}</td>
+              <td style="padding: 6px 12px; text-align: right; border-bottom: 1px solid #eee; border-right: 1px solid #ddd; font-size: 11px;">${item.quantity}</td>
+              <td style="padding: 6px 12px; text-align: center; border-bottom: 1px solid #eee; border-right: 1px solid #ddd; font-size: 11px;">${item.unitLabel}</td>
+              <td style="padding: 6px 12px; text-align: right; border-bottom: 1px solid #eee; font-size: 11px;">${formatEuro(item.total)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -310,26 +341,26 @@ function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
       </table>
 
       <!-- Payment -->
-      <div style="margin-top: 20px;">
+      <div style="margin-top: 10px;">
         <div>${effectivePaymentText}</div>
       </div>
 
       <!-- Bank Details -->
-      <div style="margin-top: 15px; font-size: 11px;">
+      <div style="font-size: 11px; margin-top: 10px;">
         <div>Bank : ${bankName}</div>
-        <div style="margin-top: 8px;">IBAN : ${iban}</div>
+        <div style="">IBAN : ${iban}</div>
         <div>BIC : ${bic}</div>
-        <div style="margin-top: 8px;">Name : ${accountHolder}</div>
+        <div style="">Name : ${accountHolder}</div>
       </div>
 
       <!-- Closing -->
       <div style="margin-top: 25px;">
         <div>Mit freundlichen Grüßen</div>
-        <div style="margin-top: 30px;">${senderName}</div>
+        <div style="margin-top: 30px; margin-bottom: 10px;">${senderName}</div>
       </div>
 
       <!-- Footer - Fixed at bottom with proper margins aligned to page padding -->
-      <div style=" bottom: 0; left: 0; right: 0; font-size: 9px; border-top: 1px solid #ddd; padding-top: 10px; display: flex; justify-content: space-between;">
+      <div style="position: absolute; bottom: 20mm; left: 0; right: 0; font-size: 9px; border-top: 1px solid #ddd; padding-top: 10px; display: flex; justify-content: space-between;">
         <div>${senderName}<br>${senderStreet}<br>${senderZipCity}</div>
         <div style="text-align: right;">IdNr : ${taxId}<br>Steuernummer : ${taxNumber}</div>
       </div>
