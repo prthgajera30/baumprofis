@@ -133,11 +133,12 @@ export async function previewInvoicePdf() {
           <head>
             <title>PDF Preview - ${SAMPLE_INVOICE_DATA.invoiceNumber}</title>
             <style>
-              body { 
-                margin: 0; 
-                padding: 20px; 
-                background: #f5f5f5; 
+              body {
+                margin: 0;
+                padding: 20px;
+                background: #f5f5f5;
                 font-family: Arial, sans-serif;
+                position: relative;
               }
               .preview-container {
                 max-width: 90%;
@@ -145,24 +146,131 @@ export async function previewInvoicePdf() {
                 background: white;
                 box-shadow: 0 4px 8px rgba(0,0,0,0.1);
                 border-radius: 8px;
-                overflow: hidden;
+                overflow: visible;
+                position: relative;
               }
               .pdf-frame {
                 width: 100%;
                 height: 90vh;
                 border: none;
+                position: relative;
+                z-index: 1;
+              }
+              .ruler-container {
+                position: absolute;
+                top: 80px;
+                left: 5%;
+                width: 90%;
+                height: 90vh;
+                z-index: 100;
+                pointer-events: none;
+                overflow: visible;
+              }
+              .horizontal-ruler {
+                position: absolute;
+                top: 0;
+                left: 48px;
+                right: 0;
+                height: 40px;
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #ccc;
+                border-bottom: none;
+                border-left: none;
+                backdrop-filter: blur(1px);
+                z-index: 300;
+              }
+              .horizontal-ruler .marks {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 20px;
+              }
+              .horizontal-ruler .marks div {
+                position: absolute;
+                bottom: 0;
+                width: 1px;
+                height: 10px;
+                background: #666;
+              }
+              .horizontal-ruler .marks .major-mark {
+                height: 20px;
+              }
+              .horizontal-ruler .labels {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 20px;
+              }
+              .horizontal-ruler .labels div {
+                position: absolute;
+                bottom: 0;
+                font-size: 10px;
+                color: #666;
+                transform: translateX(-50%);
+              }
+              .vertical-ruler {
+                position: absolute;
+                top: 40px;
+                left: 0;
+                width: 48px;
+                height: calc(100% - 40px);
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid #ccc;
+                border-right: none;
+                border-top: none;
+                backdrop-filter: blur(1px);
+                z-index: 300;
+              }
+              .vertical-ruler .marks {
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 20px;
+                bottom: 0;
+              }
+              .vertical-ruler .marks div {
+                position: absolute;
+                right: 0;
+                width: 10px;
+                height: 1px;
+                background: #666;
+              }
+              .vertical-ruler .marks .major-mark {
+                width: 20px;
+              }
+              .vertical-ruler .labels {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 28px;
+                bottom: 0;
+              }
+              .vertical-ruler .labels div {
+                position: absolute;
+                right: 2px;
+                width: 26px;
+                font-size: 10px;
+                color: #666;
+                text-align: center;
+                transform: translateY(-50%);
               }
               .preview-header {
                 background: #2196F3;
                 color: white;
                 padding: 15px 20px;
                 text-align: center;
+                position: relative;
+                z-index: 2;
               }
               .controls {
                 background: #f8f9fa;
                 padding: 15px 20px;
                 border-top: 1px solid #dee2e6;
                 text-align: center;
+                position: relative;
+                z-index: 2;
               }
               .btn {
                 background: #2196F3;
@@ -186,6 +294,18 @@ export async function previewInvoicePdf() {
                 <h2>PDF Preview - Baumprofis Invoice</h2>
                 <p>Sample Invoice #${SAMPLE_INVOICE_DATA.invoiceNumber}</p>
               </div>
+              <div class="ruler-container">
+                <!-- Horizontal Ruler -->
+                <div class="horizontal-ruler">
+                  <div class="marks"></div>
+                  <div class="labels"></div>
+                </div>
+                <!-- Vertical Ruler -->
+                <div class="vertical-ruler">
+                  <div class="marks"></div>
+                  <div class="labels"></div>
+                </div>
+              </div>
               <iframe src="${pdfUrl}" class="pdf-frame"></iframe>
               <div class="controls">
                 <a href="${pdfUrl}" download="preview-${SAMPLE_INVOICE_DATA.invoiceNumber}.pdf" class="btn">
@@ -196,6 +316,106 @@ export async function previewInvoicePdf() {
                 </button>
               </div>
             </div>
+            <script>
+              // Initialize rulers when page loads and on resize. Align rulers to the displayed PDF iframe.
+              window.addEventListener('load', initRulers);
+
+              function initRulers() {
+                const iframe = document.querySelector('.pdf-frame');
+                createAlignedRulers();
+                window.addEventListener('resize', createAlignedRulers);
+                if (iframe) {
+                  // Ensure rulers align after iframe content (PDF) loads
+                  iframe.addEventListener('load', createAlignedRulers);
+                }
+              }
+
+              function createAlignedRulers() {
+                const iframe = document.querySelector('.pdf-frame');
+                const horizontalRuler = document.querySelector('.horizontal-ruler');
+                const verticalRuler = document.querySelector('.vertical-ruler');
+                const rulerContainer = document.querySelector('.ruler-container');
+
+                if (!iframe || !horizontalRuler || !verticalRuler || !rulerContainer) return;
+
+                const marksH = horizontalRuler.querySelector('.marks');
+                const labelsH = horizontalRuler.querySelector('.labels');
+                const marksV = verticalRuler.querySelector('.marks');
+                const labelsV = verticalRuler.querySelector('.labels');
+
+                // Calculate iframe size and position relative to the ruler container
+                const containerRect = rulerContainer.getBoundingClientRect();
+                const iframeRect = iframe.getBoundingClientRect();
+                const pageLeft = iframeRect.left - containerRect.left;
+                const pageTop = iframeRect.top - containerRect.top;
+                const pageWidth = Math.max(0, iframeRect.width);
+                const pageHeight = Math.max(0, iframeRect.height);
+
+                const paperWidthMM = 210; // A4 width in mm
+                const paperHeightMM = 297; // A4 height in mm
+
+                // Ensure rulers appear above the iframe
+                horizontalRuler.style.zIndex = '200';
+                verticalRuler.style.zIndex = '200';
+
+                // Position and size the ruler bars to match the visible PDF page.
+                // Use transforms so rulers align cleanly and won't be clipped by container edges.
+                horizontalRuler.style.left = pageLeft + 'px';
+                horizontalRuler.style.width = pageWidth + 'px';
+                horizontalRuler.style.top = pageTop + 'px';
+                horizontalRuler.style.transform = 'translateY(-100%)';
+
+                // Position vertical ruler left of the page using its actual width (avoid transforms which may hide it)
+                const vWidth = verticalRuler.getBoundingClientRect().width || parseFloat(getComputedStyle(verticalRuler).width) || 48;
+                verticalRuler.style.left = (pageLeft - vWidth) + 'px';
+                verticalRuler.style.top = pageTop + 'px';
+                verticalRuler.style.height = pageHeight + 'px';
+                verticalRuler.style.transform = '';
+                verticalRuler.style.display = 'block';
+                verticalRuler.style.visibility = 'visible';
+
+                // Clear previous marks/labels
+                marksH.innerHTML = '';
+                labelsH.innerHTML = '';
+                marksV.innerHTML = '';
+                labelsV.innerHTML = '';
+
+                const pxPerMM_X = pageWidth / paperWidthMM;
+                const pxPerMM_Y = pageHeight / paperHeightMM;
+
+                // Horizontal marks: every 10mm, labels every 50mm
+                for (let mm = 0; mm <= paperWidthMM; mm += 10) {
+                  const pixelPos = Math.round(mm * pxPerMM_X);
+                  const mark = document.createElement('div');
+                  mark.className = mm % 50 === 0 ? 'major-mark' : '';
+                  mark.style.left = pixelPos + 'px';
+                  marksH.appendChild(mark);
+
+                  if (mm % 50 === 0) {
+                    const label = document.createElement('div');
+                    label.textContent = mm + 'mm';
+                    label.style.left = pixelPos + 'px';
+                    labelsH.appendChild(label);
+                  }
+                }
+
+                // Vertical marks: every 10mm, labels every 50mm
+                for (let mm = 0; mm <= paperHeightMM; mm += 10) {
+                  const pixelPos = Math.round(mm * pxPerMM_Y);
+                  const mark = document.createElement('div');
+                  mark.className = mm % 50 === 0 ? 'major-mark' : '';
+                  mark.style.top = pixelPos + 'px';
+                  marksV.appendChild(mark);
+
+                  if (mm % 50 === 0) {
+                    const label = document.createElement('div');
+                    label.textContent = mm + 'mm';
+                    label.style.top = pixelPos + 'px';
+                    labelsV.appendChild(label);
+                  }
+                }
+              }
+            </script>
           </body>
         </html>
       `);
@@ -249,7 +469,6 @@ function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
 
   return `
     <div style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #333; width: 100%; min-height: 100vh; position: relative; padding-bottom: 40mm;">
-
       <!-- Header -->
       <table style="width: 100%; margin-bottom: 20px;">
         <tr>
