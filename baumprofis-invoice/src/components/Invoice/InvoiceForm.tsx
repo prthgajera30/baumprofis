@@ -5,6 +5,7 @@ import { downloadInvoicePdf } from '../../pdf/downloadInvoicePdf'
 import { db } from '../../lib/firebase'
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore'
 import { format } from 'date-fns'
+import { InvoiceValidationService, type InvoiceData as ValidationInvoiceData } from '../../services/validationService'
 
 import {
   Card,

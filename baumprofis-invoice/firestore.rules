@@ -6,32 +6,39 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper function to get user ID
-    function getUserId() {
-      return request.auth.uid;
-    }
-
     // Helper function to check if user owns the document
     function isOwner(userId) {
-      return isAuthenticated() && getUserId() == userId;
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection - user can only access their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId;
     }
 
     // Customers collection - scoped by user
-    match /customers/{document=**} {
+    match /customers/{customerId} {
       allow read, write: if isOwner(resource.data.userId);
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
     }
 
     // Invoices collection - scoped by user
-    match /invoices/{document=**} {
+    match /invoices/{invoiceId} {
       allow read, write: if isOwner(resource.data.userId);
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
     }
 
-    // Allow read/write for testing in development
-    // TODO: Remove this in production and use proper user-scoped rules above
-    match /{document=**} {
-      allow read, write;
+    // Drafts collection - temporary storage for invoice drafts
+    match /drafts/{draftId} {
+      allow read, write: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Audit logs - only service account can write
+    match /audit/{logId} {
+      allow read: if false; // No client-side reads
+      allow write: if false; // Only server-side writes allowed
     }
   }
 }
