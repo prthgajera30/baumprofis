@@ -51,22 +51,6 @@ export const SAMPLE_INVOICE_DATA = {
       quantity: 2,
       unitLabel: "Stunden",
       total: 100.00
-    },
-    {
-      position: 5,
-      description: "Entfernung des Schnittguts",
-      unitPrice: 50.00,
-      quantity: 2,
-      unitLabel: "Stunden",
-      total: 100.00
-    },
-    {
-      position: 6,
-      description: "Entfernung des Schnittguts",
-      unitPrice: 50.00,
-      quantity: 2,
-      unitLabel: "Stunden",
-      total: 100.00
     }
   ],
   netTotal: 475.00,

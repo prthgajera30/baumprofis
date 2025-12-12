@@ -5,7 +5,7 @@ import { downloadInvoicePdf } from '../../pdf/downloadInvoicePdf'
 import { db } from '../../lib/firebase'
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore'
 import { format } from 'date-fns'
-import { InvoiceValidationService, type InvoiceData as ValidationInvoiceData } from '../../services/validationService'
+import { InvoiceValidationService } from '../../services/validationService'
 
 import {
   Card,
@@ -65,18 +65,21 @@ export const InvoiceForm = () => {
   const { customers, createCustomer } = useCustomers()
   const [saving, setSaving] = useState(false)
   const [pdfDownloading, setPdfDownloading] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [lineErrors, setLineErrors] = useState<Record<string, string>>({})
 
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
-    invoiceNumber: '04138/25',
+    id: `temp_${Date.now()}`, // Temporary ID for validation
+    invoiceNumber: '04138-25',
     status: 'draft',
     date: format(new Date(), 'dd.MM.yyyy'),
-    object: '',
+    object: 'Baumarbeiten',
     customerName: '',
     customerAddress: '',
     customerStreet: '',
     customerZipCode: '',
     customerCity: '',
-    lines: [{ id: '1', description: '', unitPrice: 0, quantity: 1, unit: 'pauschal', total: 0 }],
+    lines: [{ id: '1', description: 'Baumpflegearbeiten', unitPrice: 150.00, quantity: 1, unit: 'pauschal', total: 150.00 }],
     subtotal: 0,
     vatAmount: 0,
     totalAmount: 0,
@@ -135,11 +138,119 @@ export const InvoiceForm = () => {
     }
   }
 
+  const validateAndSetErrors = async () => {
+    try {
+      // Use comprehensive validation that includes all business rules
+      const validationResult = await InvoiceValidationService.validateForPdfGeneration({
+        invoiceNumber: invoiceData.invoiceNumber,
+        customerName: invoiceData.customerName,
+        customerAddress: invoiceData.customerAddress,
+        customerEmail: undefined,
+        customerPhone: undefined,
+        lines: invoiceData.lines,
+        subtotal: invoiceData.subtotal,
+        vatAmount: invoiceData.vatAmount,
+        totalAmount: invoiceData.totalAmount,
+        date: invoiceData.date,
+        dueDate: invoiceData.dueDate,
+        object: invoiceData.object
+      }, user?.uid, invoiceData.id)
+
+      setValidationErrors(validationResult.errors || {})
+
+      // Check for line-specific errors and validate individual line fields
+      const lineErrorsMap: Record<string, string> = {}
+
+      // Validate each service line individually
+      invoiceData.lines.forEach((line) => {
+        const lineErrors: string[] = []
+
+        // Validate description
+        if (!line.description?.trim()) {
+          lineErrors.push('Beschreibung ist erforderlich')
+        } else if (line.description.trim().length < 3) {
+          lineErrors.push('Beschreibung zu kurz (mind. 3 Zeichen)')
+        }
+
+        // Validate quantity
+        if (line.quantity <= 0) {
+          lineErrors.push('Menge muss größer als 0 sein')
+        }
+
+        // Validate unit price
+        if (line.unitPrice <= 0) {
+          lineErrors.push('Einzelpreis muss größer als 0 sein')
+        }
+
+        // Validate total calculation
+        const expectedTotal = line.unitPrice * line.quantity
+        if (Math.abs(line.total - expectedTotal) > 0.01) {
+          lineErrors.push('Gesamtpreis-Berechnung ist falsch')
+        }
+
+        // If there are any line-specific errors, add them to the map
+        if (lineErrors.length > 0) {
+          lineErrorsMap[line.id] = lineErrors.join(' | ')
+        }
+      })
+
+      // Add general lines error if present
+      if (validationResult.errors?.lines) {
+        invoiceData.lines.forEach(line => {
+          if (!lineErrorsMap[line.id]) {
+            lineErrorsMap[line.id] = validationResult.errors.lines
+          }
+        })
+      }
+
+      setLineErrors(lineErrorsMap)
+      return validationResult
+    } catch (error: unknown) {
+      console.error('Validation error:', error)
+      // Handle validation errors gracefully
+      const fallbackErrors: Record<string, string> = {}
+
+      if (error instanceof Error && error.message.includes('invoiceNumber')) {
+        fallbackErrors.invoiceNumber = 'Rechnungsnummer bereits vergeben'
+      } else if (typeof error === 'string' && error.includes('invoiceNumber')) {
+        fallbackErrors.invoiceNumber = 'Rechnungsnummer bereits vergeben'
+      }
+
+      setValidationErrors(fallbackErrors)
+      return { isValid: false, errors: fallbackErrors }
+    }
+  }
+
+  const clearValidationErrors = () => {
+    setValidationErrors({})
+    setLineErrors({})
+  }
+
   const handleSave = async () => {
     if (!user) return
 
     setSaving(true)
     try {
+      // Validate invoice data before saving
+      const validationResult = await validateAndSetErrors()
+
+      // Check for both general validation errors and line-specific errors
+      const hasErrors = !validationResult.isValid || Object.keys(lineErrors).length > 0
+
+      if (hasErrors) {
+        // Collect all error messages
+        const errorMessages = [
+          ...Object.values(validationResult.errors || {}),
+          ...Object.values(lineErrors)
+        ].filter(Boolean)
+
+        if (errorMessages.length > 0) {
+          alert(`Bitte korrigieren Sie folgende Fehler:\n\n${errorMessages.join('\n')}`)
+          setSaving(false)
+          return
+        }
+      }
+
       // Auto-create customer if not exists
       let customerToUse = invoiceData
 
@@ -169,13 +280,18 @@ export const InvoiceForm = () => {
         updatedAt: new Date().toISOString()
       }
 
-      if (invoiceData.id) {
-        await updateDoc(doc(db, 'invoices', invoiceData.id), dataToSave)
-        alert('Rechnung aktualisiert!')
-      } else {
+      // Check if this is a new invoice (temporary ID) or an existing one
+      const isNewInvoice = !invoiceData.id || invoiceData.id.startsWith('temp_')
+
+      if (isNewInvoice) {
         const docRef = await addDoc(collection(db, 'invoices'), dataToSave)
         setInvoiceData(prev => ({ ...prev, id: docRef.id }))
         alert('Rechnung gespeichert!')
+        clearValidationErrors()
+      } else {
+        await updateDoc(doc(db, 'invoices', invoiceData.id!), dataToSave)
+        alert('Rechnung aktualisiert!')
+        clearValidationErrors()
       }
     } catch (error) {
       console.error('Error saving invoice:', error)
@@ -188,6 +304,19 @@ export const InvoiceForm = () => {
   const handleDownloadPDF = async () => {
     try {
       setPdfDownloading(true)
+
+      // Validate required fields before PDF generation
+      const missingFields = []
+      if (!invoiceData.customerName?.trim()) missingFields.push('Kundenname')
+      if (!invoiceData.customerAddress?.trim()) missingFields.push('Kundenadresse')
+
+      if (missingFields.length > 0) {
+        alert(`Bitte füllen Sie folgende Pflichtfelder aus:\n\n${missingFields.join('\n')}`)
+        setPdfDownloading(false)
+        return
+      }
+
+
 
       // Map InvoiceData to BaumprofisInvoicePdfProps
       const pdfProps = {
@@ -292,6 +421,8 @@ export const InvoiceForm = () => {
             label="Rechnung Nr"
             value={invoiceData.invoiceNumber}
             onChange={(e) => setInvoiceData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+            error={!!validationErrors.invoiceNumber}
+            helperText={validationErrors.invoiceNumber}
             sx={{ flex: 1, minWidth: 200 }}
           />
           <TextField
@@ -299,6 +430,8 @@ export const InvoiceForm = () => {
             label="Datum"
             value={invoiceData.date}
             onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
+            error={!!validationErrors.date}
+            helperText={validationErrors.date}
             sx={{ flex: 1, minWidth: 200 }}
           />
           <TextField
@@ -306,6 +439,8 @@ export const InvoiceForm = () => {
             label="Zahlungsziel"
             value={invoiceData.dueDate}
             onChange={(e) => setInvoiceData(prev => ({ ...prev, dueDate: e.target.value }))}
+            error={!!validationErrors.dueDate}
+            helperText={validationErrors.dueDate}
             sx={{ flex: 1, minWidth: 200 }}
           />
         </Box>
@@ -316,6 +451,8 @@ export const InvoiceForm = () => {
           label="Objekt/Beschreibung"
           value={invoiceData.object}
           onChange={(e) => setInvoiceData(prev => ({ ...prev, object: e.target.value }))}
+          error={!!validationErrors.object}
+          helperText={validationErrors.object}
           sx={{ mb: 4 }}
           placeholder="z.B. Baumarbeiten in Koblenz-Lutzel"
         />
@@ -390,6 +527,8 @@ export const InvoiceForm = () => {
                   customerId: undefined // Clear customerId when manually changing
                 }))
               }}
+              error={!!validationErrors.customerName || !!validationErrors.customer}
+              helperText={validationErrors.customerName || validationErrors.customer}
               sx={{ flex: 1, minWidth: { xs: '100%', md: 300 } }}
               placeholder="Kundenname für neuen Eintrag"
             />
@@ -407,6 +546,8 @@ export const InvoiceForm = () => {
                   customerId: undefined // Clear customerId when manually changing
                 }))
               }}
+              error={!!validationErrors.customerAddress || !!validationErrors.customer}
+              helperText={validationErrors.customerAddress || validationErrors.customer}
               sx={{ flex: 1, minWidth: { xs: '100%', md: 300 } }}
               placeholder="z.B. Lohrstr 2"
             />
@@ -417,9 +558,11 @@ export const InvoiceForm = () => {
               fullWidth
               label="PLZ"
               value={invoiceData.customerZipCode}
-              onChange={(e) => {
+            onChange={(e) => {
                 const newZip = e.target.value.replace(/\D/g, '').substring(0, 5) // Only numbers, max 5 digits
-                const combinedAddress = `${invoiceData.customerStreet ? `${invoiceData.customerStreet}, ` : ''}${newZip} ${invoiceData.customerCity}`.trim()
+                const currentStreet = invoiceData.customerStreet || ''
+                const currentCity = invoiceData.customerCity || ''
+                const combinedAddress = `${currentStreet ? `${currentStreet}, ` : ''}${newZip} ${currentCity}`.trim()
                 setInvoiceData(prev => ({
                   ...prev,
                   customerZipCode: newZip,
@@ -427,6 +570,8 @@ export const InvoiceForm = () => {
                   customerId: undefined // Clear customerId when manually changing
                 }))
               }}
+              error={!!validationErrors.customerAddress || !!validationErrors.customer}
+              helperText={validationErrors.customerAddress || validationErrors.customer}
               sx={{ flex: 1, minWidth: 120 }}
               placeholder="z.B. 5602"
             />
@@ -444,6 +589,8 @@ export const InvoiceForm = () => {
                   customerId: undefined // Clear customerId when manually changing
                 }))
               }}
+              error={!!validationErrors.customerAddress || !!validationErrors.customer}
+              helperText={validationErrors.customerAddress || validationErrors.customer}
               sx={{ flex: 1, minWidth: 200 }}
               placeholder="z.B. Koblenz"
             />
@@ -485,7 +632,7 @@ export const InvoiceForm = () => {
             </TableHead>
             <TableBody>
               {invoiceData.lines.map((line, index) => (
-                <TableRow key={line.id}>
+                <TableRow key={line.id} sx={{ backgroundColor: lineErrors[line.id] ? 'rgba(255, 0, 0, 0.05)' : 'inherit' }}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
                     <TextField
@@ -494,6 +641,8 @@ export const InvoiceForm = () => {
                       value={line.description}
                       onChange={(e) => updateLine(line.id, 'description', e.target.value)}
                       placeholder="Leistungsbeschreibung"
+                      error={!!lineErrors[line.id]}
+                      helperText={lineErrors[line.id]}
                     />
                   </TableCell>
                   <TableCell align="right">
@@ -503,10 +652,11 @@ export const InvoiceForm = () => {
                       value={line.quantity}
                       onChange={(e) => updateLine(line.id, 'quantity', parseFloat(e.target.value) || 1)}
                       inputProps={{ min: 0.01, step: 0.01 }}
+                      error={!!lineErrors[line.id]}
                     />
                   </TableCell>
                   <TableCell>
-                    <FormControl size="small">
+                    <FormControl size="small" error={!!lineErrors[line.id]}>
                       <Select
                         value={line.unit}
                         onChange={(e) => updateLine(line.id, 'unit', e.target.value)}
@@ -524,6 +674,7 @@ export const InvoiceForm = () => {
                       value={line.unitPrice}
                       onChange={(e) => updateLine(line.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                       inputProps={{ min: 0, step: 0.01 }}
+                      error={!!lineErrors[line.id]}
                     />
                   </TableCell>
                   <TableCell align="right">
@@ -598,9 +749,18 @@ export const InvoiceForm = () => {
             <Button
               variant="contained"
               color="primary"
-              onClick={() => {
+              onClick={async () => {
+                // First validate, then update status and save
+                const validationResult = await validateAndSetErrors()
+
+                if (!validationResult.isValid) {
+                  const errorMessages = Object.values(validationResult.errors).join('\n')
+                  alert(`Bitte korrigieren Sie folgende Fehler:\n\n${errorMessages}`)
+                  return
+                }
+
                 setInvoiceData(prev => ({ ...prev, status: 'finalized' }))
-                handleSave()
+                await handleSave()
               }}
               size="large"
             >

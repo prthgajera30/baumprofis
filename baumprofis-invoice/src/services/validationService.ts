@@ -37,7 +37,7 @@ export class InvoiceValidationService {
    * Validate invoice data for PDF generation
    * This is a comprehensive validation that ensures only valid invoices can be generated
    */
-  static async validateForPdfGeneration(invoiceData: InvoiceData, userId?: string): Promise<ValidationResult> {
+  static async validateForPdfGeneration(invoiceData: InvoiceData, userId?: string, excludeInvoiceId?: string): Promise<ValidationResult> {
     const errors: Record<string, string> = {};
     const warnings: string[] = [];
 
@@ -63,7 +63,7 @@ export class InvoiceValidationService {
       }
 
       // 3. Business rules validation
-      const businessResult = await validateCompleteInvoice(invoiceData, effectiveUserId);
+      const businessResult = await validateCompleteInvoice(invoiceData, effectiveUserId, excludeInvoiceId);
       if (!businessResult.isValid) {
         Object.assign(errors, businessResult.errors);
       }

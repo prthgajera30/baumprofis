@@ -21,15 +21,46 @@ import { ExitToApp as LogoutIcon } from '@mui/icons-material'
 function App() {
   const { user, loading, logout } = useAuth()
 
-  // Create mock user for development mode
-  const mockUser = {
-    email: 'dev@baumprofis.com',
-    uid: 'dev-user-123'
-  }
-
-  // Check for development mode and use mock user
+  // Check for development mode - exit immediately if in dev mode
   const isDevMode = typeof window !== 'undefined' && localStorage.getItem('dev-mode') === 'true'
-  const currentUser = isDevMode ? mockUser : user
+
+  if (isDevMode) {
+    // In dev mode, bypass Firebase entirely
+
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <AppBar position="static" color="default" elevation={1}>
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              Baumprofis Invoice Platform (Development Mode)
+            </Typography>
+            <Typography variant="body2" color="error" sx={{ mr: 2 }}>
+              ⚠️ Development Mode - Local Storage Only
+            </Typography>
+            <IconButton
+              color="inherit"
+              onClick={() => {
+                localStorage.removeItem('dev-mode')
+                window.location.reload()
+              }}
+            >
+              <LogoutIcon />
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Alert severity="warning" sx={{ mb: 4 }}>
+            <AlertTitle>🔧 Development Mode</AlertTitle>
+            Sie befinden sich im Entwicklungsmodus. Daten werden nur lokal gespeichert und nicht in Firebase.
+          </Alert>
+          <InvoiceForm />
+        </Container>
+
+        <DevTools />
+      </Box>
+    )
+  }
 
   if (loading && !isDevMode) {
     return (
@@ -47,7 +78,7 @@ function App() {
     )
   }
 
-  if (!currentUser) {
+  if (!user) {
     return (
       <Box
         sx={{
@@ -98,7 +129,7 @@ function App() {
             Baumprofis Invoice Platform
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
-            Willkommen, {currentUser.email}
+            Willkommen, {user.email}
           </Typography>
           <IconButton
             color="inherit"
