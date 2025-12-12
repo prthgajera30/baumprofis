@@ -27,30 +27,6 @@ export const SAMPLE_INVOICE_DATA = {
       quantity: 1,
       unitLabel: "Stück",
       total: 150.00
-    },
-    {
-      position: 2,
-      description: "Kronenschnitt und Auslichtung",
-      unitPrice: 75.00,
-      quantity: 3,
-      unitLabel: "Stunden",
-      total: 225.00
-    },
-    {
-      position: 3,
-      description: "Entfernung des Schnittguts",
-      unitPrice: 50.00,
-      quantity: 2,
-      unitLabel: "Stunden",
-      total: 100.00
-    },
-    {
-      position: 4,
-      description: "Entfernung des Schnittguts",
-      unitPrice: 50.00,
-      quantity: 2,
-      unitLabel: "Stunden",
-      total: 100.00
     }
   ],
   netTotal: 475.00,
@@ -563,7 +539,7 @@ function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
       </div>
 
       <!-- Footer - Fixed at bottom with proper margins aligned to page padding -->
-      <div style="position: absolute; bottom: 20mm; left: 0; right: 0; font-size: 9px; border-top: 1px solid #ddd; padding-top: 10px; display: flex; justify-content: space-between;">
+      <div style="position: absolute; bottom: 0; left: 0; right: 0; font-size: 9px; border-top: 1px solid #ddd; padding-top: 10px; display: flex; justify-content: space-between;">
         <div>${senderName}<br>${senderStreet}<br>${senderZipCity}</div>
         <div style="text-align: right;">IdNr : ${taxId}<br>Steuernummer : ${taxNumber}</div>
       </div>

@@ -429,7 +429,6 @@ export const InvoiceWizard = () => {
 
   const handleCreateInvoiceAndDownload = async () => {
     try {
-      console.log('🚫===PDF CREATION BLOCKED START===🚫')
 
       // CRITICAL BLOCK: IMMEDIATE REJECTION FOR ANY MISSING REQUIRED DATA
       // This is a fail-fast check that catches even the smallest gap

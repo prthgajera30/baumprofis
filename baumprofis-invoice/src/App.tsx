@@ -1,7 +1,10 @@
 import { useAuth } from './hooks/useAuth'
 import { LoginForm } from './components/Auth/LoginForm'
-import { InvoiceForm } from './components/Invoice/InvoiceForm'
 import DevTools from './components/Dev/DevTools'
+import { lazy, Suspense } from 'react'
+
+// Lazy load major components for code splitting
+const InvoiceForm = lazy(() => import('./components/Invoice/InvoiceForm').then(module => ({ default: module.InvoiceForm })))
 
 import {
   AppBar,
@@ -54,7 +57,9 @@ function App() {
             <AlertTitle>🔧 Development Mode</AlertTitle>
             Sie befinden sich im Entwicklungsmodus. Daten werden nur lokal gespeichert und nicht in Firebase.
           </Alert>
-          <InvoiceForm />
+          <Suspense fallback={<CircularProgress />}>
+            <InvoiceForm />
+          </Suspense>
         </Container>
 
         <DevTools />
@@ -148,7 +153,9 @@ function App() {
       </AppBar>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <InvoiceForm />
+        <Suspense fallback={<CircularProgress />}>
+          <InvoiceForm />
+        </Suspense>
       </Container>
       
       {/* Development Tools - only visible in development mode */}

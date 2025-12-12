@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { useAuth } from '../../hooks/useAuth'
 import { useInvoices } from '../../hooks/useInvoices'
 import { format } from 'date-fns'
 import { Search, Filter, FileText, Eye, Download, Edit } from 'lucide-react'
 
 export const InvoiceHistory = () => {
-  const { user } = useAuth()
   const {
     invoices,
     loading,
@@ -17,10 +15,6 @@ export const InvoiceHistory = () => {
     updateFilters,
     resetFilters
   } = useInvoices()
-
-  console.log('Current user in InvoiceHistory:', user)
-  console.log('Current user uid:', user?.uid)
-  console.log('Number of invoices found:', invoices.length)
 
   const [showFilters, setShowFilters] = useState(false)
 
@@ -42,27 +36,26 @@ export const InvoiceHistory = () => {
     }
   }
 
-  const handleViewInvoice = (invoiceId: string) => {
+  const handleViewInvoice = (_invoiceId: string) => {
     // Could navigate to invoice detail view
-    console.log('View invoice:', invoiceId)
+    // TODO: Implement view functionality
   }
 
-  const handleEditInvoice = (invoiceId: string) => {
+  const handleEditInvoice = (_invoiceId: string) => {
     // Could navigate to invoice editor
-    console.log('Edit invoice:', invoiceId)
+    // TODO: Implement edit functionality
   }
 
-  const handleDownloadPDF = (invoiceId: string) => {
+  const handleDownloadPDF = (_invoiceId: string) => {
     // Could regenerate PDF for existing invoice
-    console.log('Download PDF for invoice:', invoiceId)
+    // TODO: Implement PDF download functionality
   }
 
-  const handleMarkAsPaid = async (invoiceId: string) => {
+  const handleMarkAsPaid = async (_invoiceId: string) => {
     if (!confirm('Möchten Sie diese Rechnung wirklich als bezahlt markieren?')) return
 
     try {
       // Here you would update the invoice status to 'paid' in Firestore
-      console.log('Marking invoice as paid:', invoiceId)
       // TODO: Implement actual update to Firestore
       alert('Funktionalität wird implementiert')
     } catch (error) {
