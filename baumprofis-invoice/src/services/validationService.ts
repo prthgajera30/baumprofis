@@ -77,10 +77,8 @@ export class InvoiceValidationService {
         warnings.push('Bei Beträgen über 50.000€ nehmen Sie bitte Rücksprache.');
       }
 
-      // 5. Data quality checks
-      if (this.hasPlaceholderData(invoiceData)) {
-        errors.dataQuality = 'Bitte verwenden Sie keine Platzhalterdaten in der Rechnung.';
-      }
+      // 5. Data quality checks - specific field validation
+      this.validatePlaceholderData(invoiceData, errors);
 
       return {
         isValid: Object.keys(errors).length === 0,
@@ -182,9 +180,9 @@ export class InvoiceValidationService {
   }
 
   /**
-   * Check for placeholder/test data
+   * Check for placeholder/test data and add specific field errors
    */
-  private static hasPlaceholderData(invoiceData: InvoiceData): boolean {
+  private static validatePlaceholderData(invoiceData: InvoiceData, errors: Record<string, string>): void {
     const placeholderPatterns = [
       'kundenname', 'kunde', 'name', 'musterkunde', 'john doe', 'max mustermann',
       'straße', 'straße', 'straße', 'walterweg', 'musterstraße', 'beispielstraße',
@@ -197,12 +195,26 @@ export class InvoiceValidationService {
         text.toLowerCase().includes(pattern)
       );
 
-    if (checkText(invoiceData.customerName)) return true;
-    if (checkText(invoiceData.customerAddress)) return true;
-    if (checkText(invoiceData.object)) return true;
+    // Check customer name
+    if (checkText(invoiceData.customerName)) {
+      errors.customerName = 'Bitte geben Sie einen echten Kundennamen ein (keine Platzhalter)';
+    }
 
-    return invoiceData.lines.some(line =>
-      checkText(line.description)
-    );
+    // Check address
+    if (checkText(invoiceData.customerAddress)) {
+      errors.customerAddress = 'Bitte geben Sie eine echte Adresse ein (keine Platzhalter)';
+    }
+
+    // Check object description
+    if (checkText(invoiceData.object)) {
+      errors.object = 'Bitte geben Sie eine echte Beschreibung ein (keine Platzhalter)';
+    }
+
+    // Check service lines
+    invoiceData.lines.forEach((line, index) => {
+      if (checkText(line.description)) {
+        errors[`line_${index}_description`] = 'Bitte geben Sie eine echte Dienstleistungsbeschreibung ein';
+      }
+    });
   }
 }

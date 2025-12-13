@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomers } from '../../hooks/useCustomers'
+import { useToast } from '../../hooks/useToast'
 import { downloadInvoicePdf } from '../../pdf/downloadInvoicePdf'
 import { db } from '../../lib/firebase'
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore'
@@ -63,6 +64,7 @@ interface InvoiceData {
 export const InvoiceForm = () => {
   const { user } = useAuth()
   const { customers, createCustomer } = useCustomers()
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
   const [pdfDownloading, setPdfDownloading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -158,50 +160,73 @@ export const InvoiceForm = () => {
 
       setValidationErrors(validationResult.errors || {})
 
-      // Check for line-specific errors and validate individual line fields
-      const lineErrorsMap: Record<string, string> = {}
+      // Collect all field-specific errors including line errors
+      // Move line validation errors to individual field keys like 'line_1_unitPrice', 'line_2_description', etc.
+      const fieldErrors: Record<string, string> = { ...validationResult.errors }
 
-      // Validate each service line individually
-      invoiceData.lines.forEach((line) => {
-        const lineErrors: string[] = []
+      // Process line validation errors into specific field keys
+      invoiceData.lines.forEach((_line, index) => {
+        const lineKey = `line_${index}`
 
-        // Validate description
-        if (!line.description?.trim()) {
-          lineErrors.push('Beschreibung ist erforderlich')
-        } else if (line.description.trim().length < 3) {
-          lineErrors.push('Beschreibung zu kurz (mind. 3 Zeichen)')
+        // Check for field-specific validation errors
+        if (validationResult.errors[`line_${index}_description`]) {
+          fieldErrors[`${lineKey}_description`] = validationResult.errors[`line_${index}_description`]
+          delete validationResult.errors[`line_${index}_description`]
         }
-
-        // Validate quantity
-        if (line.quantity <= 0) {
-          lineErrors.push('Menge muss größer als 0 sein')
+        if (validationResult.errors[`line_${index}_price`] || validationResult.errors[`line_${index}_unitPrice`]) {
+          fieldErrors[`${lineKey}_unitPrice`] = validationResult.errors[`line_${index}_price`] || validationResult.errors[`line_${index}_unitPrice`]
+          delete validationResult.errors[`line_${index}_price`]
+          delete validationResult.errors[`line_${index}_unitPrice`]
         }
-
-        // Validate unit price
-        if (line.unitPrice <= 0) {
-          lineErrors.push('Einzelpreis muss größer als 0 sein')
+        if (validationResult.errors[`line_${index}_quantity`]) {
+          fieldErrors[`${lineKey}_quantity`] = validationResult.errors[`line_${index}_quantity`]
+          delete validationResult.errors[`line_${index}_quantity`]
         }
-
-        // Validate total calculation
-        const expectedTotal = line.unitPrice * line.quantity
-        if (Math.abs(line.total - expectedTotal) > 0.01) {
-          lineErrors.push('Gesamtpreis-Berechnung ist falsch')
-        }
-
-        // If there are any line-specific errors, add them to the map
-        if (lineErrors.length > 0) {
-          lineErrorsMap[line.id] = lineErrors.join(' | ')
+        if (validationResult.errors[`line_${index}_total`]) {
+          fieldErrors[`${lineKey}_total`] = validationResult.errors[`line_${index}_total`]
+          delete validationResult.errors[`line_${index}_total`]
         }
       })
 
-      // Add general lines error if present
-      if (validationResult.errors?.lines) {
-        invoiceData.lines.forEach(line => {
-          if (!lineErrorsMap[line.id]) {
-            lineErrorsMap[line.id] = validationResult.errors.lines
-          }
-        })
-      }
+      setValidationErrors(fieldErrors)
+
+      // Create a simple line errors map for row highlighting - check if any field in this line has an error
+      const lineErrorsMap: Record<string, string> = {}
+      invoiceData.lines.forEach((line, index) => {
+        const lineKey = `line_${index}`
+        const lineFieldErrors: string[] = []
+
+        // Check each possible field for this line
+        if (fieldErrors[`${lineKey}_description`]) lineFieldErrors.push(fieldErrors[`${lineKey}_description`])
+        if (fieldErrors[`${lineKey}_quantity`]) lineFieldErrors.push(fieldErrors[`${lineKey}_quantity`])
+        if (fieldErrors[`${lineKey}_unitPrice`]) lineFieldErrors.push(fieldErrors[`${lineKey}_unitPrice`])
+        if (fieldErrors[`${lineKey}_total`]) lineFieldErrors.push(fieldErrors[`${lineKey}_total`])
+
+        // Also do basic validation for user feedback
+        if (!line.description?.trim()) {
+          lineFieldErrors.push('Beschreibung ist erforderlich')
+        } else if (line.description.trim().length < 3) {
+          lineFieldErrors.push('Beschreibung zu kurz (mind. 3 Zeichen)')
+        }
+
+        if (line.quantity <= 0) {
+          lineFieldErrors.push('Menge muss größer als 0 sein')
+        }
+
+        if (line.unitPrice <= 0) {
+          lineFieldErrors.push('Einzelpreis muss größer als 0 sein')
+        }
+
+        const expectedTotal = line.unitPrice * line.quantity
+        if (Math.abs(line.total - expectedTotal) > 0.01) {
+          lineFieldErrors.push('Gesamtpreis-Berechnung ist falsch')
+        }
+
+        // Combine all errors for this line with pipe separator
+        if (lineFieldErrors.length > 0) {
+          lineErrorsMap[line.id] = lineFieldErrors.slice(0, 2).join(' | ') // Limit to first 2 errors to avoid clutter
+        }
+      })
 
       setLineErrors(lineErrorsMap)
       return validationResult
@@ -245,7 +270,7 @@ export const InvoiceForm = () => {
         ].filter(Boolean)
 
         if (errorMessages.length > 0) {
-          alert(`Bitte korrigieren Sie folgende Fehler:\n\n${errorMessages.join('\n')}`)
+          toast.validationError(`Bitte korrigieren Sie die Eingaben:\n${errorMessages.join(', ')}`)
           setSaving(false)
           return
         }
@@ -286,16 +311,16 @@ export const InvoiceForm = () => {
       if (isNewInvoice) {
         const docRef = await addDoc(collection(db, 'invoices'), dataToSave)
         setInvoiceData(prev => ({ ...prev, id: docRef.id }))
-        alert('Rechnung gespeichert!')
+        toast.invoiceSaved(dataToSave.invoiceNumber)
         clearValidationErrors()
       } else {
         await updateDoc(doc(db, 'invoices', invoiceData.id!), dataToSave)
-        alert('Rechnung aktualisiert!')
+        toast.success('Rechnung wurde erfolgreich aktualisiert')
         clearValidationErrors()
       }
     } catch (error) {
       console.error('Error saving invoice:', error)
-      alert('Fehler beim Speichern der Rechnung.')
+      toast.error('Fehler beim Speichern der Rechnung. Bitte versuchen Sie es erneut.')
     } finally {
       setSaving(false)
     }
@@ -311,7 +336,7 @@ export const InvoiceForm = () => {
       if (!invoiceData.customerAddress?.trim()) missingFields.push('Kundenadresse')
 
       if (missingFields.length > 0) {
-        alert(`Bitte füllen Sie folgende Pflichtfelder aus:\n\n${missingFields.join('\n')}`)
+        toast.validationError(`Bitte füllen Sie folgende Pflichtfelder aus:\n${missingFields.join(', ')}`)
         setPdfDownloading(false)
         return
       }
@@ -376,10 +401,10 @@ export const InvoiceForm = () => {
         taxNumber: "004/853/60532"
       }
 
-      await downloadInvoicePdf(pdfProps)
+      await downloadInvoicePdf(pdfProps, { success: toast.success, error: toast.error })
     } catch (error) {
       console.error('PDF download error:', error)
-      alert('Fehler beim Herunterladen der PDF.')
+      toast.error('Fehler beim Herunterladen der PDF. Bitte versuchen Sie es erneut.')
     } finally {
       setPdfDownloading(false)
     }
@@ -755,7 +780,7 @@ export const InvoiceForm = () => {
 
                 if (!validationResult.isValid) {
                   const errorMessages = Object.values(validationResult.errors).join('\n')
-                  alert(`Bitte korrigieren Sie folgende Fehler:\n\n${errorMessages}`)
+                  toast.validationError(`Bitte korrigieren Sie folgende Fehler:\n\n${errorMessages}`)
                   return
                 }
 

@@ -1,10 +1,10 @@
 import { useAuth } from './hooks/useAuth'
 import { LoginForm } from './components/Auth/LoginForm'
-import DevTools from './components/Dev/DevTools'
 import { lazy, Suspense } from 'react'
 
 // Lazy load major components for code splitting
 const InvoiceForm = lazy(() => import('./components/Invoice/InvoiceForm').then(module => ({ default: module.InvoiceForm })))
+const DevTools = lazy(() => import('./components/Dev/DevTools'))
 
 import {
   AppBar,

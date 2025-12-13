@@ -168,10 +168,15 @@ function formatEuro(value: number): string {
   }) + " €";
 }
 
-export async function downloadInvoicePdf(props: BaumprofisInvoicePdfProps) {
+export async function downloadInvoicePdf(props: BaumprofisInvoicePdfProps, toast?: { success: (msg: string) => void, error: (msg: string) => void }) {
   // Basic validation - ensure we have the minimum required data for PDF generation
   if (!props.recipientName?.trim() || !props.recipientStreet?.trim() || props.items.length === 0) {
-    alert('Fehlende Empfängerdaten oder Positionen. Bitte überprüfen Sie die Rechnung.');
+    const message = 'Fehlende Empfängerdaten oder Positionen. Bitte überprüfen Sie die Rechnung.';
+    if (toast) {
+      toast.error(message);
+    } else {
+      alert(message);
+    }
     throw new Error('Missing required data for PDF generation');
   }
 
@@ -201,7 +206,12 @@ export async function downloadInvoicePdf(props: BaumprofisInvoicePdfProps) {
   const dataIntegrityResult = InvoiceValidationService.validateDataIntegrity(invoiceData);
   if (!dataIntegrityResult.isValid) {
     const errorMessages = Object.values(dataIntegrityResult.errors).join('\n');
-    alert(`PDF-Generierung blockiert:\n\n${errorMessages}`);
+    const message = `PDF-Generierung blockiert:\n\n${errorMessages}`;
+    if (toast) {
+      toast.error(message);
+    } else {
+      alert(message);
+    }
     throw new Error('Validation failed for PDF generation');
   }
 
@@ -243,10 +253,20 @@ export async function downloadInvoicePdf(props: BaumprofisInvoicePdfProps) {
     const filename = `Rechnung-${props.invoiceNumber}.pdf`;
     pdf.save(filename);
 
-    alert('✅ PDF erfolgreich heruntergeladen!');
+    const message = `PDF erfolgreich heruntergeladen: ${filename}`;
+    if (toast) {
+      toast.success(message);
+    } else {
+      alert('✅ ' + message);
+    }
 
   } catch (error) {
     console.error('PDF generation error:', error);
-    alert('Fehler beim Generieren der PDF. Versuchen Sie es erneut.');
+    const message = 'Fehler beim Generieren der PDF. Versuchen Sie es erneut.';
+    if (toast) {
+      toast.error(message);
+    } else {
+      alert(message);
+    }
   }
 }

@@ -17,17 +17,44 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate vendor libraries for better caching
-          'react-vendor': ['react', 'react-dom'],
-          'mui-vendor': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
-          'firebase-vendor': ['firebase'],
-          'utils-vendor': ['date-fns', 'zod', 'lucide-react'],
+        manualChunks: (id) => {
+          // Large vendor libraries
+          if (id.includes('node_modules')) {
+            if (id.includes('@mui') || id.includes('material')) {
+              return 'mui-vendor'
+            }
+            if (id.includes('firebase')) {
+              return 'firebase-vendor'
+            }
+            if (id.includes('react') || id.includes('scheduler')) {
+              return 'react-vendor'
+            }
+            if (id.includes('date-fns') || id.includes('zod') || id.includes('lucide')) {
+              return 'utils-vendor'
+            }
+            if (id.includes('html2canvas') || id.includes('jspdf')) {
+              return 'pdf-vendor'
+            }
+            // Group smaller node_modules together
+            return 'vendor'
+          }
+          // Separate larger application components
+          if (id.includes('useInvoice') || id.includes('services/validation')) {
+            return 'invoice-logic'
+          }
+          if (id.includes('components/Invoice') || id.includes('components/ui')) {
+            return 'invoice-components'
+          }
+          // Test utilities in separate chunk
+          if (id.includes('test') || id.includes('mocks')) {
+            return 'test-utils'
+          }
         },
       },
     },
-    // Increase chunk size warning limit
-    chunkSizeWarningLimit: 1000,
+    // Performance budgets - fail build if exceeded
+    chunkSizeWarningLimit: 750, // Lower threshold for warnings
+    sourcemap: false, // Disable sourcemaps in production for smaller bundles
   },
   optimizeDeps: {
     include: ['react', 'react-dom', '@mui/material', '@mui/icons-material', 'firebase'],
