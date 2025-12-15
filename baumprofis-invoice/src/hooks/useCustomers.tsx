@@ -66,6 +66,17 @@ export const useCustomers = () => {
     if (!user) throw new Error('User not authenticated')
 
     try {
+      // First check if customer with same name and address already exists
+      const existingCustomer = customers.find(customer =>
+        customer.name.toLowerCase() === customerData.name.toLowerCase() &&
+        customer.address.toLowerCase() === customerData.address.toLowerCase()
+      )
+
+      if (existingCustomer) {
+        // Return existing customer instead of creating duplicate
+        return existingCustomer
+      }
+
       const now = new Date().toISOString()
       const dataToSave = {
         ...customerData,

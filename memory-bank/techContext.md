@@ -41,11 +41,14 @@
   - **Firebase Storage**: (Future) Photo attachments with automatic backups
 
 ### PDF Generation & File Handling
-- **jsPDF** + **html2canvas** for template-accurate PDF creation
+- **jsPDF** + **html2canvas** for template-accurate PDF creation (VITE APPROACH)
+  - **Logo Integration**: Proper Vite asset processing with import statements
+  - **Dual PDF Support**: Both preview and download with consistent logo display
   - Client-side generation (no server required)
   - Pixel-perfect rendering of German invoice template
   - Automatic download with browser compatibility
 - **File-saver** for cross-platform downloads
+- **Reactive Validation UX**: `useEffect` + `requestAnimationFrame` for perfect field focusing timing
 
 ### Development & Build Tools
 - **Vite** as build tool and dev server

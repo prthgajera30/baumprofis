@@ -3,10 +3,13 @@ import html2canvas from "html2canvas";
 import type { BaumprofisInvoicePdfProps } from "./invoiceTypes";
 import { InvoiceValidationService, type InvoiceData } from "../services/validationService";
 
+// Import the logo as a module to get the proper Vite-processed URL
+import companyLogo from "../assets/logos/Company_logo.png";
+
 /**
  * Generate HTML template for the invoice
  */
-function generateInvoiceHTML(props: BaumprofisInvoicePdfProps): string {
+function generateInvoiceHTML(props: BaumprofisInvoicePdfProps, logoUrl: string): string {
   const {
     companyName,
     companyTaglineLines,
@@ -51,7 +54,7 @@ function generateInvoiceHTML(props: BaumprofisInvoicePdfProps): string {
             ${companyTaglineLines.map(line => `<div style="font-size: 10px; color: #666;">${line}</div>`).join('')}
           </td>
           <td style="width: 45%; text-align: right; vertical-align: top;">
-            <img src="/logos/baumprofis logo.png" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 10px;" alt="Company Logo">
+            <img src="${logoUrl}" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 10px;" alt="Company Logo">
           </td>
         </tr>
         <tr>
@@ -218,7 +221,7 @@ export async function downloadInvoicePdf(props: BaumprofisInvoicePdfProps, toast
   try {
     // Create temporary HTML element with the invoice template
     const invoiceElement = document.createElement('div');
-    invoiceElement.innerHTML = generateInvoiceHTML(props);
+    invoiceElement.innerHTML = generateInvoiceHTML(props, companyLogo);
     invoiceElement.style.position = 'absolute';
     invoiceElement.style.left = '-9999px';
     invoiceElement.style.width = '210mm';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomers } from '../../hooks/useCustomers'
 import { useToast } from '../../hooks/useToast'
@@ -30,7 +30,11 @@ import {
   Chip,
   Autocomplete
 } from '@mui/material'
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { de } from 'date-fns/locale'
+import { Add as AddIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material'
 
 
 interface InvoiceLine {
@@ -69,6 +73,17 @@ export const InvoiceForm = () => {
   const [pdfDownloading, setPdfDownloading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [lineErrors, setLineErrors] = useState<Record<string, string>>({})
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
+  const [selectedDueDate, setSelectedDueDate] = useState<Date | null>(new Date(Date.now() + 10 * 24 * 60 * 60 * 1000))
+
+  // Refs for form field focusing on validation errors
+  const invoiceNumberRef = useRef<HTMLInputElement>(null)
+  const objectRef = useRef<HTMLInputElement>(null)
+  const customerNameRef = useRef<HTMLInputElement>(null)
+  const customerStreetRef = useRef<HTMLInputElement>(null)
+  const customerZipCodeRef = useRef<HTMLInputElement>(null)
+  const customerCityRef = useRef<HTMLInputElement>(null)
 
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     id: `temp_${Date.now()}`, // Temporary ID for validation
@@ -251,8 +266,60 @@ export const InvoiceForm = () => {
     setLineErrors({})
   }
 
+  // Focus the first field with validation errors using useEffect
+  useEffect(() => {
+    const hasErrors = Object.keys(validationErrors).length > 0 || Object.keys(lineErrors).length > 0
+
+    if (hasErrors) {
+      // Use requestAnimationFrame after a minimal delay to ensure DOM updates
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          // Check fields in logical order for user correction
+          if (validationErrors.invoiceNumber && invoiceNumberRef.current) {
+            invoiceNumberRef.current.focus()
+            return
+          }
+          if (validationErrors.object && objectRef.current) {
+            objectRef.current.focus()
+            return
+          }
+          if ((validationErrors.customerName || validationErrors.customer) && customerNameRef.current) {
+            customerNameRef.current.focus()
+            return
+          }
+          if ((validationErrors.customerAddress || validationErrors.customer) && customerStreetRef.current) {
+            customerStreetRef.current.focus()
+            return
+          }
+          if ((validationErrors.customerAddress || validationErrors.customer) && customerZipCodeRef.current) {
+            customerZipCodeRef.current.focus()
+            return
+          }
+          if ((validationErrors.customerAddress || validationErrors.customer) && customerCityRef.current) {
+            customerCityRef.current.focus()
+            return
+          }
+          // Focus on invoice lines if there are line errors (scroll to first error row)
+          if (Object.keys(lineErrors).length > 0) {
+            const firstErrorRow = Object.keys(lineErrors)[0]
+            const rowElement = document.querySelector(`[data-row-id="${firstErrorRow}"]`)
+            if (rowElement) {
+              rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+          }
+        })
+      }, 50) // Minimal delay, then requestAnimationFrame ensures DOM update
+    }
+  }, [validationErrors, lineErrors]) // React to validation error changes
+
   const handleSave = async () => {
     if (!user) return
+
+    // Prevent multiple simultaneous saves
+    if (saving) {
+      console.log('Save operation already in progress')
+      return
+    }
 
     setSaving(true)
     try {
@@ -271,6 +338,7 @@ export const InvoiceForm = () => {
 
         if (errorMessages.length > 0) {
           toast.validationError(`Bitte korrigieren Sie die Eingaben:\n${errorMessages.join(', ')}`)
+          // Focus is handled automatically by useEffect when validationErrors change
           setSaving(false)
           return
         }
@@ -341,9 +409,7 @@ export const InvoiceForm = () => {
         return
       }
 
-
-
-      // Map InvoiceData to BaumprofisInvoicePdfProps
+      // Map InvoiceData to BaumprofisInvoicePdfProps - keeping the original approach
       const pdfProps = {
         // Header / sender (static values from the original template)
         companyName: "Baumprofis",
@@ -411,31 +477,19 @@ export const InvoiceForm = () => {
   }
 
   return (
-    <Card sx={{ maxWidth: 'lg', mx: 'auto' }}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+      <Card sx={{ maxWidth: 'lg', mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Neue Rechnung erstellen
-        </Typography>
-        <Typography variant="body1" color="text.secondary" align="center" gutterBottom>
-          Professionelle Rechnung für Baumdienstleistungen
-        </Typography>
-
-        {/* Company Header */}
-        <Box sx={{ textAlign: 'center', mb: 4, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-          <Typography variant="h5" component="h2" gutterBottom>
-            Baumprofis
+        {/* Professional Header with call-to-action */}
+        <Box sx={{ textAlign: 'center', mb: 6, p: 4, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
+            Neue Rechnung erstellen
           </Typography>
-          <Typography variant="body2">
-            Baumpflege . Baumsanierung . Baumsicherung
+          <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
+            Schnell und professionell zum Ergebnis
           </Typography>
-          <Typography variant="body2">
-            Baumkontrolle . Gartenpflege . Baumfällarbeiten
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            Phidelia Ogbeide . Mühlstraße 22 . 65388 Schlangenbad
-          </Typography>
-          <Typography variant="body2">
-            Mobil: +49 175 6048985
+          <Typography variant="body1" sx={{ opacity: 0.8 }}>
+            Erstellen Sie eine Rechnung in nur wenigen Minuten mit intelligenter Kundensuche und automatischen Berechnungen.
           </Typography>
         </Box>
 
@@ -444,35 +498,55 @@ export const InvoiceForm = () => {
           <TextField
             fullWidth
             label="Rechnung Nr"
+            inputRef={invoiceNumberRef}
             value={invoiceData.invoiceNumber}
             onChange={(e) => setInvoiceData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
             error={!!validationErrors.invoiceNumber}
             helperText={validationErrors.invoiceNumber}
             sx={{ flex: 1, minWidth: 200 }}
           />
-          <TextField
-            fullWidth
+          <DatePicker
             label="Datum"
-            value={invoiceData.date}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
-            error={!!validationErrors.date}
-            helperText={validationErrors.date}
-            sx={{ flex: 1, minWidth: 200 }}
+            value={selectedDate}
+            onChange={(newValue) => {
+              setSelectedDate(newValue)
+              const formattedDate = newValue ? format(newValue, 'dd.MM.yyyy') : ''
+              setInvoiceData(prev => ({ ...prev, date: formattedDate }))
+            }}
+            format="dd.MM.yyyy"
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                error: !!validationErrors.date,
+                helperText: validationErrors.date,
+                sx: { flex: 1, minWidth: 200 }
+              }
+            }}
           />
-          <TextField
-            fullWidth
+          <DatePicker
             label="Zahlungsziel"
-            value={invoiceData.dueDate}
-            onChange={(e) => setInvoiceData(prev => ({ ...prev, dueDate: e.target.value }))}
-            error={!!validationErrors.dueDate}
-            helperText={validationErrors.dueDate}
-            sx={{ flex: 1, minWidth: 200 }}
+            value={selectedDueDate}
+            onChange={(newValue) => {
+              setSelectedDueDate(newValue)
+              const formattedDueDate = newValue ? format(newValue, 'dd.MM.yyyy') : ''
+              setInvoiceData(prev => ({ ...prev, dueDate: formattedDueDate }))
+            }}
+            format="dd.MM.yyyy"
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                error: !!validationErrors.dueDate,
+                helperText: validationErrors.dueDate,
+                sx: { flex: 1, minWidth: 200 }
+              }
+            }}
           />
         </Box>
 
         {/* Object */}
         <TextField
           fullWidth
+          inputRef={objectRef}
           label="Objekt/Beschreibung"
           value={invoiceData.object}
           onChange={(e) => setInvoiceData(prev => ({ ...prev, object: e.target.value }))}
@@ -513,8 +587,13 @@ export const InvoiceForm = () => {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Vorhandenen Kunden suchen"
-                placeholder="Kunden auswählen..."
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <SearchIcon fontSize="small" />
+                    Vorhandenen Kunden suchen
+                  </Box>
+                }
+                placeholder="Tippen Sie, um Kunden zu suchen..."
               />
             )}
             renderOption={(props, customer) => (
@@ -542,6 +621,7 @@ export const InvoiceForm = () => {
           <Box sx={{ display: { xs: 'block', md: 'flex' }, gap: 3, mb: 2 }}>
             <TextField
               fullWidth
+              inputRef={customerNameRef}
               label="Kundenname"
               value={invoiceData.customerName}
               onChange={(e) => {
@@ -559,6 +639,7 @@ export const InvoiceForm = () => {
             />
             <TextField
               fullWidth
+              inputRef={customerStreetRef}
               label="Straße & Hausnummer"
               value={invoiceData.customerStreet}
               onChange={(e) => {
@@ -581,6 +662,7 @@ export const InvoiceForm = () => {
           <Box sx={{ display: { xs: 'block', md: 'flex' }, gap: 3 }}>
             <TextField
               fullWidth
+              inputRef={customerZipCodeRef}
               label="PLZ"
               value={invoiceData.customerZipCode}
             onChange={(e) => {
@@ -602,6 +684,7 @@ export const InvoiceForm = () => {
             />
             <TextField
               fullWidth
+              inputRef={customerCityRef}
               label="Ort"
               value={invoiceData.customerCity}
               onChange={(e) => {
@@ -657,7 +740,7 @@ export const InvoiceForm = () => {
             </TableHead>
             <TableBody>
               {invoiceData.lines.map((line, index) => (
-                <TableRow key={line.id} sx={{ backgroundColor: lineErrors[line.id] ? 'rgba(255, 0, 0, 0.05)' : 'inherit' }}>
+                <TableRow key={line.id} data-row-id={line.id} sx={{ backgroundColor: lineErrors[line.id] ? 'rgba(255, 0, 0, 0.05)' : 'inherit' }}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
                     <TextField
@@ -781,6 +864,7 @@ export const InvoiceForm = () => {
                 if (!validationResult.isValid) {
                   const errorMessages = Object.values(validationResult.errors).join('\n')
                   toast.validationError(`Bitte korrigieren Sie folgende Fehler:\n\n${errorMessages}`)
+                  // Focus is handled automatically by useEffect when validationErrors change
                   return
                 }
 
@@ -807,5 +891,6 @@ export const InvoiceForm = () => {
         </Box>
         </CardContent>
       </Card>
+    </LocalizationProvider>
   )
 }

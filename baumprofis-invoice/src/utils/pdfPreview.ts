@@ -1,6 +1,9 @@
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
+// Import the logo as a module to get the proper Vite-processed URL
+import companyLogo from "../assets/logos/Company_logo.png";
+
 // Sample invoice data for development preview
 export const SAMPLE_INVOICE_DATA = {
   companyName: "Baumprofis",
@@ -50,7 +53,7 @@ export async function previewInvoicePdf() {
   try {
     // Create temporary HTML element with the invoice template
     const invoiceElement = document.createElement('div');
-    invoiceElement.innerHTML = generateInvoiceHTML(SAMPLE_INVOICE_DATA);
+    invoiceElement.innerHTML = generateInvoiceHTML(SAMPLE_INVOICE_DATA, companyLogo);
     invoiceElement.style.position = 'absolute';
     invoiceElement.style.left = '-9999px';
     invoiceElement.style.width = '210mm';
@@ -392,7 +395,7 @@ export async function previewInvoicePdf() {
 }
 
 // Copy the HTML generation logic from downloadInvoicePdf.tsx
-function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
+function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA, logoUrl: string): string {
   const {
     companyName,
     companyTaglineLines,
@@ -437,7 +440,7 @@ function generateInvoiceHTML(props: typeof SAMPLE_INVOICE_DATA): string {
             ${companyTaglineLines.map(line => `<div style="font-size: 10px; color: #666;">${line}</div>`).join('')}
           </td>
           <td style="width: 45%; text-align: right; vertical-align: top;">
-            <img src="/logos/baumprofis logo.png" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 10px;" alt="Company Logo">
+            <img src="${logoUrl}" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 10px;" alt="Company Logo">
           </td>
         </tr>
         <tr>

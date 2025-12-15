@@ -78,6 +78,12 @@ User Interaction → Action Dispatch → Service Call → Firebase Operation →
 3. **PDF Assembly**: jsPDF compiles with German locale formatting
 4. **Download Optimization**: Progressive chunked download for mobile
 
+### Reactive Validation UX Pattern
+1. **State-Driven Updates**: `useEffect` watches validation state changes
+2. **DOM Synchronization**: `requestAnimationFrame` ensures browser paint completion
+3. **Field Priority Logic**: Sequential focus order prevents user confusion
+4. **Cross-Component Updates**: Real-time UI updates without manual intervention
+
 ## Security & Data Patterns
 
 ### Authentication Guards

@@ -62,7 +62,12 @@ function App() {
           </Suspense>
         </Container>
 
-        <DevTools />
+        {/* Lazy load DevTools only when needed */}
+        {isDevMode && (
+          <Suspense fallback={null}>
+            <DevTools />
+          </Suspense>
+        )}
       </Box>
     )
   }
@@ -130,7 +135,12 @@ function App() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="static" color="default" elevation={1}>
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{ flexGrow: 1, cursor: 'pointer' }}
+            onClick={() => window.location.reload()}
+          >
             Baumprofis Invoice Platform
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
