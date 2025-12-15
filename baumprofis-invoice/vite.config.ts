@@ -18,26 +18,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Large vendor libraries
+          // Single vendor chunk for all dependencies to prevent cross-chunk React references
           if (id.includes('node_modules')) {
-            if (id.includes('@mui') || id.includes('material')) {
-              return 'mui-vendor'
-            }
-            if (id.includes('firebase')) {
-              return 'firebase-vendor'
-            }
-            if (id.includes('react') || id.includes('scheduler')) {
-              return 'react-vendor'
-            }
-            if (id.includes('date-fns') || id.includes('zod') || id.includes('lucide')) {
-              return 'utils-vendor'
-            }
-            if (id.includes('html2canvas') || id.includes('jspdf')) {
-              return 'pdf-vendor'
-            }
-            // Group smaller node_modules together
             return 'vendor'
           }
+
           // Separate larger application components
           if (id.includes('useInvoice') || id.includes('services/validation')) {
             return 'invoice-logic'
